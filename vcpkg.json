@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "unarmed-hotkey",
+  "version-semver": "1.0.0",
+  "builtin-baseline": "7ebd64e6bb56c739136ba9a691b0f4440bacb5cd",
+  "dependencies": [
+    "fmt",
+    "spdlog",
+    "rapidcsv",
+    "simpleini",
+    "directxtk"
+  ],
+  "license": "GPL-3.0-or-later"
+}
