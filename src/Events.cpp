@@ -25,24 +25,19 @@ namespace Events
                                 return RE::BSEventNotifyControl::kContinue;
                             }
                             const auto device{ btn_event->GetDevice() };
-                            auto keycode{ btn_event->GetIDCode() };
+                            auto       keycode{ btn_event->GetIDCode() };
                             if (device != kKeyboard && device != kGamepad) {
                                 return RE::BSEventNotifyControl::kContinue;
                             }
                             if (device == kGamepad) {
                                 keycode = SKSE::InputMap::GamepadMaskToKeycode(keycode);
                             }
-                            const auto manager{ RE::ActorEquipManager::GetSingleton() };
                             if (keycode == Settings::hotkey) {
                                 if (Utility::unequip_flag) {
-                                    logger::debug("Toggling unequip off");
-                                    manager->UnequipObject(player, Utility::unarmed_weapon);
-                                    Utility::unequip_flag = false;
+                                    Utility::Equip();
                                 }
                                 else {
-                                    logger::debug("Toggling unequip on");
-                                    manager->EquipObject(player, Utility::unarmed_weapon);
-                                    Utility::unequip_flag = true;
+                                    Utility::Unequip();
                                 }
                             }
                         }
