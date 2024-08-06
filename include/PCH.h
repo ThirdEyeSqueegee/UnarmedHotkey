@@ -5,6 +5,9 @@
 // Concepts library
 #include <concepts>
 
+// Coroutines library
+#include <coroutine>
+
 // Utilities library
 #include <any>
 #include <bitset>
@@ -67,6 +70,7 @@
 #include <forward_list>
 #include <list>
 #include <map>
+#include <mdspan>
 #include <queue>
 #include <set>
 #include <span>
@@ -113,7 +117,6 @@
 #include <spanstream>
 #include <sstream>
 #include <streambuf>
-#include <strstream>
 #include <syncstream>
 
 // Filesystem library
@@ -138,15 +141,10 @@
 
 /* ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 
-// clang-format off
 #include <RE/Skyrim.h>
 #include <REL/Relocation.h>
+#include <REX/W32.h>
 #include <SKSE/SKSE.h>
-
-#include <ShlObj_core.h>
-#include <Psapi.h>
-#include <Windows.h>
-// clang-format on
 
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/msvc_sink.h>
@@ -169,7 +167,7 @@ public:
     constexpr auto operator=(const Singleton&) = delete;
     constexpr auto operator=(Singleton&&)      = delete;
 
-    [[nodiscard]] static constexpr T* GetSingleton() noexcept
+    [[nodiscard]] static constexpr auto GetSingleton() noexcept
     {
         static T singleton;
         return std::addressof(singleton);
@@ -189,13 +187,13 @@ public:
     constexpr auto operator=(const EventSingleton&) = delete;
     constexpr auto operator=(EventSingleton&&)      = delete;
 
-    [[nodiscard]] static constexpr TDerived* GetSingleton() noexcept
+    [[nodiscard]] static constexpr auto GetSingleton() noexcept
     {
         static TDerived singleton;
         return std::addressof(singleton);
     }
 
-    static constexpr void Register() noexcept
+    static constexpr auto Register() noexcept
     {
         using TEventSource = RE::BSTEventSource<TEvent>;
 
@@ -207,43 +205,51 @@ public:
             const auto manager{ RE::BSInputDeviceManager::GetSingleton() };
             manager->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
+            logger::info("");
             return;
         }
         else if constexpr (std::is_base_of_v<TEventSource, RE::UI>) {
             const auto ui{ RE::UI::GetSingleton() };
             ui->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
+            logger::info("");
             return;
         }
         else if constexpr (std::is_same_v<TEvent, SKSE::ActionEvent>) {
             SKSE::GetActionEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
+            logger::info("");
             return;
         }
         else if constexpr (std::is_same_v<TEvent, SKSE::CameraEvent>) {
             SKSE::GetCameraEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
+            logger::info("");
             return;
         }
         else if constexpr (std::is_same_v<TEvent, SKSE::CrosshairRefEvent>) {
             SKSE::GetCrosshairRefEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
+            logger::info("");
             return;
         }
         else if constexpr (std::is_same_v<TEvent, SKSE::ModCallbackEvent>) {
             SKSE::GetModCallbackEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
+            logger::info("");
             return;
         }
         else if constexpr (std::is_same_v<TEvent, SKSE::NiNodeUpdateEvent>) {
             SKSE::GetNiNodeUpdateEventSource()->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
+            logger::info("");
             return;
         }
         else if constexpr (std::is_base_of_v<TEventSource, RE::ScriptEventSourceHolder>) {
             const auto holder{ RE::ScriptEventSourceHolder::GetSingleton() };
             holder->AddEventSink(GetSingleton());
             logger::info("Registered {} handler", name);
+            logger::info("");
             return;
         }
         const auto plugin{ SKSE::PluginDeclaration::GetSingleton() };
@@ -255,25 +261,46 @@ namespace stl
 {
     using namespace SKSE::stl;
 
-    template <typename T>
-    constexpr auto write_thunk_call() noexcept
+    template <typename T, std::size_t Size = 5>
+    constexpr auto write_thunk_call(const std::uintptr_t a_address) noexcept
     {
         SKSE::AllocTrampoline(14);
         auto& trampoline{ SKSE::GetTrampoline() };
-        T::func = trampoline.write_call<5>(T::address, T::Thunk);
+        T::func = trampoline.write_call<Size>(a_address, T::Thunk);
     }
 
-    template <typename TDest, typename TSource>
-    constexpr auto write_vfunc() noexcept
+    template <typename T, std::size_t Size = 5>
+    constexpr auto write_thunk_call() noexcept
     {
-        REL::Relocation<std::uintptr_t> vtbl{ TDest::VTABLE[0] };
-        TSource::func = vtbl.write_vfunc(TSource::idx, TSource::Thunk);
+        write_thunk_call<T, Size>(T::address);
     }
 
     template <typename T>
     constexpr auto write_vfunc(const REL::VariantID variant_id) noexcept
     {
-        REL::Relocation<std::uintptr_t> vtbl{ variant_id };
+        REL::Relocation vtbl{ variant_id };
         T::func = vtbl.write_vfunc(T::idx, T::Thunk);
+    }
+
+    template <typename TDest, typename TSource>
+    constexpr auto write_vfunc(const std::size_t a_vtableIdx = 0) noexcept
+    {
+        write_vfunc<TSource>(TDest::VTABLE[a_vtableIdx]);
+    }
+
+    template <typename T, std::size_t Size = 5>
+    constexpr auto write_thunk_jump(const std::uintptr_t a_src) noexcept
+    {
+        SKSE::AllocTrampoline(14);
+        auto& trampoline{ SKSE::GetTrampoline() };
+        T::func = trampoline.write_branch<Size>(a_src, T::Thunk);
+    }
+
+    inline auto add_thread_task(const std::function<void()>& a_fn, const std::chrono::milliseconds a_wait_for = 0ms) noexcept
+    {
+        std::jthread([=] {
+            std::this_thread::sleep_for(a_wait_for);
+            SKSE::GetTaskInterface()->AddTask(a_fn);
+        }).detach();
     }
 } // namespace stl
