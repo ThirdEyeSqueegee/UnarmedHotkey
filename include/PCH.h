@@ -198,7 +198,7 @@ public:
         using TEventSource = RE::BSTEventSource<TEvent>;
 
         const std::string dirty_name{ typeid(TEvent).name() };
-        const std::regex  p{ "struct |RE::|SKSE::| * __ptr64" };
+        const std::regex  p{ "class |struct |RE::|SKSE::| * __ptr64" };
         const auto        name{ std::regex_replace(dirty_name, p, "") };
 
         if constexpr (std::is_base_of_v<TEventSource, RE::BSInputDeviceManager>) {
@@ -296,7 +296,28 @@ namespace stl
         T::func = trampoline.write_branch<Size>(a_src, T::Thunk);
     }
 
-    inline auto add_thread_task(const std::function<void()>& a_fn, const std::chrono::milliseconds a_wait_for = 0ms) noexcept
+    namespace detail
+    {
+        template <typename>
+        struct is_chrono_duration : std::false_type
+        {
+        };
+
+        template <typename Rep, typename Period>
+        struct is_chrono_duration<std::chrono::duration<Rep, Period>> : std::true_type
+        {
+        };
+
+        template <typename T>
+        concept is_duration = is_chrono_duration<T>::value;
+    } // namespace detail
+
+    inline auto add_thread_task(const std::function<void()>& a_fn) noexcept
+    {
+        std::jthread([=] { SKSE::GetTaskInterface()->AddTask(a_fn); }).detach();
+    }
+
+    auto add_thread_task(const std::function<void()>& a_fn, const detail::is_duration auto a_wait_for) noexcept
     {
         std::jthread([=] {
             std::this_thread::sleep_for(a_wait_for);

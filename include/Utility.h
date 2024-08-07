@@ -8,11 +8,11 @@ class Utility : public Singleton<Utility>
 
     inline static RE::BGSEquipSlot* left_hand_slot{};
 
-    inline static RE::TESObjectWEAP* unarmed_weapon{};
-
     inline static std::atomic<bool> equip_unarmed_flag{};
 
 public:
+    inline static RE::TESObjectWEAP* unarmed_weapon{};
+
     using EquippedPairType = std::pair<RE::TESBoundObject*, RE::TESBoundObject*>;
 
     inline static EquippedPairType equip_cache{};

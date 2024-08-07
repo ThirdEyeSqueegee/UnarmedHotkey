@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "unarmed-hotkey",
-  "version-semver": "1.1.0",
-  "builtin-baseline": "a2367ceec5f092d8777606ca110426cadd7ed7db",
+  "version-semver": "1.1.1",
+  "builtin-baseline": "6af584dd59aa5bdba75dae6781ec74614e03e5b9",
   "dependencies": ["fmt", "spdlog", "rapidcsv", "simpleini", "directxtk"],
   "overrides": [
     {

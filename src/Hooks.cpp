@@ -20,16 +20,21 @@ namespace Hooks
         }
 
         if (const auto player{ RE::PlayerCharacter::GetSingleton() }) {
-            if (player->GetGraphVariableBool("IsUnequipping", is_unequipping)) {
-                if (is_unequipping) {
-                    if (!started_unequip_anim) {
-                        started_unequip_anim = true;
-                    }
+            if (const auto equipped_right{ player->GetEquippedObject(false) }) {
+                if (equipped_right->GetFormID() == Utility::unarmed_weapon->GetFormID()) {
+                    return func();
                 }
-                else {
-                    if (started_unequip_anim) {
-                        Utility::sem.release();
-                        started_unequip_anim = false;
+                if (player->GetGraphVariableBool("IsUnequipping", is_unequipping)) {
+                    if (is_unequipping) {
+                        if (!started_unequip_anim) {
+                            started_unequip_anim = true;
+                        }
+                    }
+                    else {
+                        if (started_unequip_anim) {
+                            Utility::sem.release();
+                            started_unequip_anim = false;
+                        }
                     }
                 }
             }
