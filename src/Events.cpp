@@ -15,7 +15,7 @@ namespace Events
             if (ui->GameIsPaused() || ui->IsApplicationMenuOpen() || ui->IsItemMenuOpen() || ui->IsModalMenuOpen()) {
                 return RE::BSEventNotifyControl::kContinue;
             }
-            if (const auto control_map{ RE::ControlMap::GetSingleton() }; control_map->IsFightingControlsEnabled()) {
+            if (const auto control_map{ RE::ControlMap::GetSingleton() }; control_map->IsMovementControlsEnabled()) {
                 if (const auto player{ RE::PlayerCharacter::GetSingleton() }; player->Is3DLoaded()) {
                     for (auto e{ *a_event }; e != nullptr; e = e->next) {
                         if (const auto btn_event{ e->AsButtonEvent() }) {
@@ -33,11 +33,11 @@ namespace Events
                                 keycode = SKSE::InputMap::GamepadMaskToKeycode(keycode);
                             }
                             if (keycode == Settings::hotkey) {
-                                if (Utility::IsPlayerUnarmed()) {
-                                    Utility::Equip();
+                                if (!Utility::IsUnarmedEquipped()) {
+                                    Utility::EquipUnarmed();
                                 }
                                 else {
-                                    Utility::Unequip();
+                                    Utility::UnequipUnarmed();
                                 }
                             }
                         }

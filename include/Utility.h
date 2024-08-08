@@ -25,6 +25,7 @@ public:
             sem.acquire();
 
             if (equip_unarmed_flag) {
+                logger::debug("Equipping unarmed weapon");
                 SKSE::GetTaskInterface()->AddTask([=] {
                     manager->EquipObject(player, unarmed_weapon, nullptr, 1, right_hand_slot);
                     player->DrawWeaponMagicHands(true);
@@ -54,10 +55,10 @@ public:
         }
     }
 
-    static auto IsPlayerUnarmed() noexcept
+    static auto IsUnarmedEquipped() noexcept
     {
         if (const auto player{ RE::PlayerCharacter::GetSingleton() }) {
-            if (const auto equipped_right{ player->GetEquippedObject(false) }) {
+            if (const auto equipped_right{ player->GetEquippedObject(false) }; player->AsActorState()->IsWeaponDrawn()) {
                 if (equipped_right->GetFormID() == unarmed_weapon->GetFormID()) {
                     return true;
                 }
@@ -67,10 +68,15 @@ public:
         return false;
     }
 
-    static auto Equip() noexcept
+    static auto UnequipUnarmed() noexcept
     {
         if (const auto player{ RE::PlayerCharacter::GetSingleton() }) {
             if (const auto manager{ RE::ActorEquipManager::GetSingleton() }) {
+                if (IsUnarmedEquipped() && equip_cache.first == nullptr && equip_cache.second == nullptr) {
+                    player->DrawWeaponMagicHands(false);
+                    return;
+                }
+
                 manager->UnequipObject(player, unarmed_weapon);
 
                 if (equip_cache.first) {
@@ -80,7 +86,7 @@ public:
                     else {
                         manager->EquipObject(player, equip_cache.first, nullptr, 1, right_hand_slot);
                     }
-                    logger::debug("Equipped right: {} (0x{:x})", equip_cache.first->GetName(), equip_cache.first->GetFormID());
+                    logger::debug("Equipped cached right: {} (0x{:x})", equip_cache.first->GetName(), equip_cache.first->GetFormID());
                     equip_cache.first = nullptr;
                 }
                 if (equip_cache.second) {
@@ -90,7 +96,7 @@ public:
                     else {
                         manager->EquipObject(player, equip_cache.second, nullptr, 1, left_hand_slot);
                     }
-                    logger::debug("Equipped left: {} (0x{:x})", equip_cache.second->GetName(), equip_cache.second->GetFormID());
+                    logger::debug("Equipped ceched left: {} (0x{:x})", equip_cache.second->GetName(), equip_cache.second->GetFormID());
                     equip_cache.second = nullptr;
                 }
 
@@ -100,13 +106,14 @@ public:
         }
     }
 
-    static auto Unequip() noexcept
+    static auto EquipUnarmed() noexcept
     {
         if (const auto player{ RE::PlayerCharacter::GetSingleton() }) {
             bool is_2h{};
-            if (const auto right{ player->GetEquippedObject(false) }) {
+
+            if (const auto right{ player->GetEquippedObject(false) }; player->AsActorState()->IsWeaponDrawn()) {
                 if (const auto right_bound_obj{ right->As<RE::TESBoundObject>() }) {
-                    logger::debug("Unequipping right: {} (0x{:x})", right_bound_obj->GetName(), right_bound_obj->GetFormID());
+                    logger::debug("Caching equipped right: {} (0x{:x})", right_bound_obj->GetName(), right_bound_obj->GetFormID());
                     equip_cache.first = right_bound_obj;
 
                     if (const auto right_weapon{ right_bound_obj->As<RE::TESObjectWEAP>() }) {
@@ -117,7 +124,7 @@ public:
                     if (!is_2h) {
                         if (const auto left{ player->GetEquippedObject(true) }) {
                             const auto left_bound_obj{ left->As<RE::TESBoundObject>() };
-                            logger::debug("Unequipping left: {} (0x{:x})", left_bound_obj->GetName(), left_bound_obj->GetFormID());
+                            logger::debug("Caching equipped left: {} (0x{:x})", left_bound_obj->GetName(), left_bound_obj->GetFormID());
                             equip_cache.second = left_bound_obj;
                         }
                     }
@@ -125,6 +132,10 @@ public:
                     player->DrawWeaponMagicHands(false);
                     equip_unarmed_flag = true;
                 }
+            }
+            else {
+                equip_unarmed_flag = true;
+                sem.release();
             }
         }
     }
